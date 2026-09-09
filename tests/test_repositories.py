@@ -6,6 +6,19 @@ from unittest.mock import patch
 from git_cli import repositories
 
 
+class PreferenceTests(unittest.TestCase):
+    def test_theme_and_source_file_share_preferences(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            preferences = Path(temporary_directory) / "preferences.json"
+
+            with patch.object(repositories, "preferences_path", return_value=preferences):
+                repositories.save_theme("midnight")
+                repositories.save_source_file(Path("/tmp/repos.txt"))
+
+                self.assertEqual(repositories.load_theme(), "midnight")
+                self.assertEqual(repositories.load_source_file(), Path("/tmp/repos.txt"))
+
+
 class RepositoryTests(unittest.TestCase):
     def test_imports_valid_repositories_and_skips_comments(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -138,6 +151,16 @@ class RepositoryTests(unittest.TestCase):
         self.assertTrue(completed)
         self.assertIn("Successfully rebased", result)
         run_git.assert_called_once_with(Path("."), "pull", "--rebase")
+
+    @patch("git_cli.repositories.run_git")
+    def test_reads_conflicted_files(self, run_git: object) -> None:
+        run_git.return_value.returncode = 0
+        run_git.return_value.stdout = "src/app.py\nREADME.md\n"
+
+        result = repositories.conflicted_files(Path("."))
+
+        self.assertEqual(result, ["src/app.py", "README.md"])
+        run_git.assert_called_once_with(Path("."), "diff", "--name-only", "--diff-filter=U")
 
     @patch("git_cli.repositories.run_git")
     def test_reads_diff_for_tracked_file(self, run_git: object) -> None:

@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+import subprocess
 from typing import Optional
 
 from textual.app import App, ComposeResult
@@ -481,6 +483,7 @@ class GitCliApp(App[None]):
 
     def on_mount(self) -> None:
         self.apply_theme(self.color_theme)
+        self.sync_source_file()
         self.refresh_repositories()
         self.show_github_status()
         self.query_one("#setup", Vertical).display = not self.repositories
@@ -633,6 +636,7 @@ class GitCliApp(App[None]):
         )
 
     def action_refresh_status(self) -> None:
+        self.sync_source_file()
         self.show_status()
 
     def action_discard_changes(self) -> None:
@@ -733,8 +737,21 @@ class GitCliApp(App[None]):
             return
         completed, result = repositories.pull(self.selected_repository, rebase)
         self.show_status()
-        title = "Pull completed" if completed else "Pull stopped; resolve conflicts before continuing"
-        self.set_diff(f"{title}\n\n{result}")
+        if completed:
+            self.set_diff(f"Pull completed\n\n{result}")
+            return
+        self.set_diff(f"Pull stopped; resolve conflicts before continuing.\n\n{result}")
+        self.open_conflict_editor()
+
+    def open_conflict_editor(self) -> None:
+        if self.selected_repository is None:
+            return
+        files = repositories.conflicted_files(self.selected_repository)
+        if not files:
+            return
+        editor = os.environ.get("EDITOR") or os.environ.get("VISUAL") or "vi"
+        with self.suspend():
+            subprocess.call([editor, *files], cwd=self.selected_repository)
 
     def action_issues(self) -> None:
         if self.selected_repository is None:
@@ -842,11 +859,25 @@ class GitCliApp(App[None]):
         if not path.is_file():
             status.update("File not found.")
             return
+        self.import_from(path)
+        status.update(f"{len(self.repositories)} repositories registered.")
+
+    def sync_source_file(self) -> None:
+        source = repositories.load_source_file()
+        candidates = [source] if source else []
+        if not source:
+            candidates.append(Path.cwd() / "repos.txt")
+        for candidate in candidates:
+            if candidate.is_file():
+                self.import_from(candidate)
+                break
+
+    def import_from(self, path: Path) -> None:
         result = repositories.import_file(path, self.repositories)
         self.repositories.extend(result.repositories)
         repositories.save(self.repositories)
+        repositories.save_source_file(path)
         self.refresh_repositories()
-        status.update(f"{len(result.repositories)} repositories added; {len(result.invalid_paths)} invalid paths.")
 
 
 def main() -> None:

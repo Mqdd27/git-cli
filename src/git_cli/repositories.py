@@ -40,16 +40,37 @@ def preferences_path() -> Path:
 
 
 def load_theme() -> str:
-    try:
-        return json.loads(preferences_path().read_text()).get("theme", "forest")
-    except (OSError, json.JSONDecodeError):
-        return "forest"
+    return read_preferences().get("theme", "forest")
 
 
 def save_theme(theme: str) -> None:
+    preferences = read_preferences()
+    preferences["theme"] = theme
+    write_preferences(preferences)
+
+
+def load_source_file() -> Path:
+    value = read_preferences().get("source_file", "")
+    return Path(value) if value else Path()
+
+
+def save_source_file(path: Path) -> None:
+    preferences = read_preferences()
+    preferences["source_file"] = str(path)
+    write_preferences(preferences)
+
+
+def read_preferences() -> dict[str, str]:
+    try:
+        return json.loads(preferences_path().read_text())
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def write_preferences(preferences: dict[str, str]) -> None:
     path = preferences_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps({"theme": theme}) + "\n")
+    path.write_text(json.dumps(preferences, indent=2) + "\n")
 
 
 def load() -> list[Path]:
@@ -167,6 +188,13 @@ def pull(path: Path, rebase: bool = False) -> tuple[bool, str]:
     result = run_git(path, *arguments)
     output = result.stdout.strip() or result.stderr.strip() or "Pull completed."
     return result.returncode == 0, output
+
+
+def conflicted_files(path: Path) -> list[str]:
+    result = run_git(path, "diff", "--name-only", "--diff-filter=U")
+    if result.returncode != 0:
+        return []
+    return [name for name in result.stdout.splitlines() if name]
 
 
 def pull_fast_forward(path: Path) -> tuple[bool, str]:

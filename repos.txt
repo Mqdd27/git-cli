@@ -1,2 +1,3 @@
 # Monitored repositories
 /Users/macbook/Documents/projects/git-cli
+/Users/macbook/Documents/projects/summarizer
