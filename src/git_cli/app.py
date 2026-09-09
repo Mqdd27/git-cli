@@ -82,6 +82,85 @@ class PushScreen(ModalScreen[Optional[str]]):
         return self.branches[index]
 
 
+class UndoCommitScreen(ModalScreen[bool]):
+    CSS = """
+    UndoCommitScreen { align: center middle; }
+    #undo-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #undo-actions { height: 3; align: center middle; }
+    #undo-actions Button { margin: 0 1; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="undo-dialog"):
+            yield Label("Undo the last commit?")
+            yield Static("The commit is removed locally. Its changes remain staged. Pushed commits are not reverted remotely.")
+            with Horizontal(id="undo-actions"):
+                yield Button("Undo commit", id="confirm-undo")
+                yield Button("Cancel", id="cancel-undo")
+
+    def on_mount(self) -> None:
+        self.query_one("#cancel-undo", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "confirm-undo")
+
+
+class DiscardScreen(ModalScreen[bool]):
+    CSS = """
+    DiscardScreen { align: center middle; }
+    #discard-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #discard-actions { height: 3; align: center middle; }
+    #discard-actions Button { margin: 0 1; }
+    """
+
+    def __init__(self, count: int) -> None:
+        super().__init__()
+        self.count = count
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="discard-dialog"):
+            yield Label(f"Discard changes in {self.count} selected file(s)?")
+            yield Static("This cannot be undone. Untracked files are not deleted.")
+            with Horizontal(id="discard-actions"):
+                yield Button("Discard changes", id="confirm-discard")
+                yield Button("Cancel", id="cancel-discard")
+
+    def on_mount(self) -> None:
+        self.query_one("#cancel-discard", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "confirm-discard")
+
+
+class PullStrategyScreen(ModalScreen[Optional[bool]]):
+    CSS = """
+    PullStrategyScreen { align: center middle; }
+    #pull-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #pull-actions { height: 3; align: center middle; }
+    #pull-actions Button { margin: 0 1; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="pull-dialog"):
+            yield Label("Remote and local branches have diverged")
+            yield Static("Choose how to integrate remote commits. No rebase is the default.")
+            with Horizontal(id="pull-actions"):
+                yield Button("Pull without rebase", id="pull-merge")
+                yield Button("Pull with rebase", id="pull-rebase")
+                yield Button("Cancel", id="cancel-pull")
+
+    def on_mount(self) -> None:
+        self.query_one("#pull-merge", Button).focus()
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "pull-merge":
+            self.dismiss(False)
+        elif event.button.id == "pull-rebase":
+            self.dismiss(True)
+        else:
+            self.dismiss(None)
+
+
 class ConfirmCloseScreen(ModalScreen[bool]):
     CSS = """
     ConfirmCloseScreen { align: center middle; }
@@ -206,13 +285,13 @@ class GitCliApp(App[None]):
         ("v", "toggle_visual", "Visual"),
         ("s", "stage_changes", "Stage"),
         ("c", "commit", "Commit"),
+        ("u", "undo_commit", "Undo commit"),
         ("p", "push", "Push"),
+        ("P", "pull", "Pull"),
         ("i", "issues", "Issues"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
-        ("ctrl+w,h", "focus_repositories", "Repositories"),
-        ("ctrl+w,l", "focus_changes", "Changes"),
-        ("ctrl+w,j", "focus_diff", "Diff"),
+        ("ctrl+w", "window_prefix", "Window"),
         ("tab", "select_cursor", "Open"),
         ("escape", "show_status", "Status"),
     ]
@@ -229,6 +308,7 @@ class GitCliApp(App[None]):
     #changes { height: 12; margin-top: 1; border: tall #426f58; overflow-y: auto; }
     #changes > ListItem.selected { background: #365f79; color: #fff8df; }
     #diff { height: 1fr; margin-top: 1; color: #f5eed8; border: tall #426f58; }
+    #diff:focus { border: tall #d49a3a; background: #142018; }
     ListView > ListItem { padding: 0 1; }
     ListView > ListItem:hover { background: #3a684f; }
     ListView > ListItem.--highlight { background: #d49a3a; color: #1b241f; text-style: bold; }
@@ -247,6 +327,9 @@ class GitCliApp(App[None]):
         self.changes: list[repositories.Change] = []
         self.selected_change_indexes: set[int] = set()
         self.open_change_indexes: set[int] = set()
+        self.awaiting_window_command = False
+        self.awaiting_diff_g = False
+        self.awaiting_changes_d = False
 
     def compose(self) -> ComposeResult:
         with Grid(id="topbar"):
@@ -274,6 +357,58 @@ class GitCliApp(App[None]):
         self.set_diff("Select changes with v, then press Tab or d to toggle their diffs.")
 
     def on_key(self, event: Key) -> None:
+        if self.awaiting_changes_d:
+            self.awaiting_changes_d = False
+            event.prevent_default()
+            event.stop()
+            if event.key == "d":
+                self.action_discard_changes()
+            return
+        if isinstance(self.focused, ListView) and self.focused.id == "changes" and event.key == "d":
+            event.prevent_default()
+            event.stop()
+            self.awaiting_changes_d = True
+            return
+        if isinstance(self.focused, RichLog):
+            if event.key == "ctrl+d":
+                event.prevent_default()
+                event.stop()
+                self.focused.action_page_down()
+                return
+            if event.key == "ctrl+u":
+                event.prevent_default()
+                event.stop()
+                self.focused.action_page_up()
+                return
+            if event.key == "G":
+                event.prevent_default()
+                event.stop()
+                self.awaiting_diff_g = False
+                self.focused.action_scroll_end()
+                return
+            if self.awaiting_diff_g:
+                self.awaiting_diff_g = False
+                event.prevent_default()
+                event.stop()
+                if event.key == "g":
+                    self.focused.action_scroll_home()
+                return
+            if event.key == "g":
+                event.prevent_default()
+                event.stop()
+                self.awaiting_diff_g = True
+                return
+        if self.awaiting_window_command:
+            self.awaiting_window_command = False
+            event.prevent_default()
+            event.stop()
+            if event.key == "h":
+                self.action_focus_repositories()
+            elif event.key in ("l", "k"):
+                self.action_focus_changes()
+            elif event.key == "j":
+                self.action_focus_diff()
+            return
         if event.key != "tab":
             return
         event.prevent_default()
@@ -370,6 +505,23 @@ class GitCliApp(App[None]):
     def action_refresh_status(self) -> None:
         self.show_status()
 
+    def action_discard_changes(self) -> None:
+        if self.selected_repository is None:
+            return
+        indexes = self.selected_change_indexes or self.current_change_index()
+        if not indexes:
+            return
+        self.push_screen(DiscardScreen(len(indexes)), lambda confirmed: self.discard_changes(indexes, confirmed))
+
+    def discard_changes(self, indexes: set[int], confirmed: bool) -> None:
+        if not confirmed or self.selected_repository is None:
+            return
+        result = repositories.discard(
+            self.selected_repository, (self.changes[index] for index in sorted(indexes))
+        )
+        self.show_status()
+        self.set_diff(result)
+
     def action_stage_changes(self) -> None:
         if self.selected_repository is None:
             return
@@ -393,6 +545,50 @@ class GitCliApp(App[None]):
         result = repositories.commit(self.selected_repository, message)
         self.show_status()
         self.set_diff(result)
+
+    def action_undo_commit(self) -> None:
+        if self.selected_repository is None:
+            return
+        self.push_screen(UndoCommitScreen(), self.undo_commit)
+
+    def undo_commit(self, confirmed: bool) -> None:
+        if not confirmed or self.selected_repository is None:
+            return
+        result = repositories.undo_last_commit(self.selected_repository)
+        self.show_status()
+        self.set_diff(result)
+
+    def action_pull(self) -> None:
+        if self.selected_repository is None:
+            return
+        self.set_diff("Preparing fast-forward pull...\n\nRunning: git pull --ff-only")
+        self.call_after_refresh(self.run_fast_forward_pull)
+
+    def run_fast_forward_pull(self) -> None:
+        if self.selected_repository is None:
+            return
+        completed, result = repositories.pull_fast_forward(self.selected_repository)
+        if completed:
+            self.show_status()
+            self.set_diff(f"Pull result\n\n{result}")
+            return
+        self.set_diff(f"Fast-forward pull was not possible.\n\n{result}")
+        self.push_screen(PullStrategyScreen(), self.run_pull_strategy)
+
+    def run_pull_strategy(self, rebase: Optional[bool]) -> None:
+        if rebase is None or self.selected_repository is None:
+            return
+        command = "git pull --rebase" if rebase else "git pull --no-rebase"
+        self.set_diff(f"Preparing pull...\n\nRunning: {command}")
+        self.call_after_refresh(self.execute_pull_strategy, rebase)
+
+    def execute_pull_strategy(self, rebase: bool) -> None:
+        if self.selected_repository is None:
+            return
+        completed, result = repositories.pull(self.selected_repository, rebase)
+        self.show_status()
+        title = "Pull completed" if completed else "Pull stopped; resolve conflicts before continuing"
+        self.set_diff(f"{title}\n\n{result}")
 
     def action_issues(self) -> None:
         if self.selected_repository is None:
@@ -456,6 +652,9 @@ class GitCliApp(App[None]):
         focused = self.focused
         if isinstance(focused, ListView):
             focused.action_select_cursor()
+
+    def action_window_prefix(self) -> None:
+        self.awaiting_window_command = True
 
     def action_focus_repositories(self) -> None:
         self.query_one("#repos", ListView).focus()

@@ -106,6 +106,19 @@ def commit(path: Path, message: str) -> str:
     return result.stdout.strip() or result.stderr.strip() or "Commit completed."
 
 
+def discard(path: Path, changes: Iterable[Change]) -> str:
+    tracked = [change.path for change in changes if change.code != "??"]
+    if not tracked:
+        return "Untracked files are not discarded automatically."
+    result = run_git(path, "restore", "--worktree", "--", *tracked)
+    return result.stdout.strip() or result.stderr.strip() or "Changes discarded."
+
+
+def undo_last_commit(path: Path) -> str:
+    result = run_git(path, "reset", "--soft", "HEAD~1")
+    return result.stdout.strip() or result.stderr.strip() or "Last commit undone; changes remain staged."
+
+
 def github_repository(path: Path) -> str:
     result = run_git(path, "remote", "get-url", "origin")
     if result.returncode != 0:
@@ -128,6 +141,19 @@ def branches(path: Path) -> list[str]:
 def push(path: Path, branch: str) -> str:
     result = run_git(path, "push", "-u", "origin", branch)
     return result.stdout.strip() or result.stderr.strip() or "Push completed."
+
+
+def pull(path: Path, rebase: bool = False) -> tuple[bool, str]:
+    arguments = ("pull", "--rebase") if rebase else ("pull", "--no-rebase")
+    result = run_git(path, *arguments)
+    output = result.stdout.strip() or result.stderr.strip() or "Pull completed."
+    return result.returncode == 0, output
+
+
+def pull_fast_forward(path: Path) -> tuple[bool, str]:
+    result = run_git(path, "pull", "--ff-only")
+    output = result.stdout.strip() or result.stderr.strip() or "Pull completed."
+    return result.returncode == 0, output
 
 
 def diff(path: Path, change: Change) -> str:
