@@ -43,14 +43,17 @@ In the setup panel, enter the text file path and select **Import repositories**.
 - macOS: `~/Library/Application Support/git-cli/repos.json`
 - Linux: `$XDG_CONFIG_HOME/git-cli/repos.json` or `~/.config/git-cli/repos.json`
 
+The text file path is remembered. On startup and refresh (`g`), the file is read again, so repositories added later appear without a manual re-import.
+
 ## Workflow
 
 1. Select a repository from the left panel.
 2. Review changed files in the changes panel.
-3. Use `v` to select or unselect files, then `s` to stage or unstage them.
-4. Use `c` to write a commit message in the centered dialog.
-5. Use `p` to select a local branch and push it to `origin`.
-6. Use `i` to view GitHub issues for the active repository.
+3. Use `v` to select or unselect files; `Tab` or `d` toggles their diffs.
+4. Use `s` to stage or unstage selected files.
+5. Use `c` to write a commit message in the centered dialog.
+6. Use `p` to select a local branch and push it to `origin`, or `P` to pull.
+7. Use `i` to view GitHub issues for the active repository.
 
 ## Key bindings
 
@@ -59,16 +62,36 @@ In the setup panel, enter the text file path and select **Import repositories**.
 | `q` | Quit |
 | `g` | Refresh repository status |
 | `j` / `k` | Move down / up in the focused panel |
+| `gg` / `G` | Scroll diff view to top / bottom |
+| `Ctrl+D` / `Ctrl+U` | Scroll diff view down / up by half page |
 | `Ctrl+W H` | Focus the repository list |
-| `Ctrl+W L` | Focus the changes list |
+| `Ctrl+W L` / `Ctrl+W K` | Focus the changes list |
 | `Ctrl+W J` | Focus the diff view |
 | `Tab` or `d` | Toggle the diff for the active or visually selected changes |
 | `v` | Select or unselect the active changed file |
 | `s` | Stage unstaged files or unstage staged files |
+| `d d` | Discard changes in selected files (with confirmation) |
 | `c` | Open the commit message dialog |
+| `u` | Undo the last commit (`git reset --soft HEAD~1`) |
 | `p` | Select a branch and push to `origin` |
+| `P` | Pull the active branch; choose rebase or merge strategy |
+| `T` | Change the color theme |
 | `i` | Open the GitHub issues dialog |
 | `Escape` | Refresh the current repository status |
+
+## Pull conflicts
+
+When a pull cannot fast-forward, a dialog asks whether to merge or rebase. If the pull stops on conflicts, Git CLI detects the conflicted files and opens them in your editor so you can resolve them. After editing, stage the files with `s` and finish the merge or rebase from the terminal.
+
+## Editor configuration
+
+Git CLI opens the editor configured in `$EDITOR` (fallback: `vi`). For GUI editors, make sure to tell the shell to wait for the editor window to close:
+
+```sh
+# ~/.zshrc or ~/.bashrc
+export EDITOR="code --wait"
+export VISUAL="$EDITOR"
+```
 
 ## Issues
 
