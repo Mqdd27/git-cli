@@ -40,6 +40,48 @@ class CommitScreen(ModalScreen[Optional[str]]):
             self.dismiss(None)
 
 
+class PushScreen(ModalScreen[Optional[str]]):
+    CSS = """
+    PushScreen { align: center middle; }
+    #push-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #push-branches { height: 10; margin-top: 1; border: tall #426f58; }
+    #push-actions { height: 3; align: center middle; }
+    #push-actions Button { margin: 0 1; }
+    """
+
+    def __init__(self, branches: list[str]) -> None:
+        super().__init__()
+        self.branches = branches
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="push-dialog"):
+            yield Label("Select a branch to push to origin")
+            with ListView(id="push-branches"):
+                for branch in self.branches:
+                    yield ListItem(Label(branch))
+            with Horizontal(id="push-actions"):
+                yield Button("Push", id="confirm-push")
+                yield Button("Cancel", id="cancel-push")
+
+    def on_mount(self) -> None:
+        self.query_one("#push-branches", ListView).focus()
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        self.dismiss(self.selected_branch())
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "confirm-push":
+            self.dismiss(self.selected_branch())
+        else:
+            self.dismiss(None)
+
+    def selected_branch(self) -> Optional[str]:
+        index = self.query_one("#push-branches", ListView).index
+        if index is None or index < 0 or index >= len(self.branches):
+            return None
+        return self.branches[index]
+
+
 class GitCliApp(App[None]):
     TITLE = "Git CLI"
     BINDINGS = [
@@ -49,6 +91,7 @@ class GitCliApp(App[None]):
         ("v", "toggle_visual", "Visual"),
         ("s", "stage_changes", "Stage"),
         ("c", "commit", "Commit"),
+        ("p", "push", "Push"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
         ("ctrl+w,h", "focus_repositories", "Repositories"),
@@ -226,6 +269,22 @@ class GitCliApp(App[None]):
         if message is None or self.selected_repository is None:
             return
         result = repositories.commit(self.selected_repository, message)
+        self.show_status()
+        self.set_diff(result)
+
+    def action_push(self) -> None:
+        if self.selected_repository is None:
+            return
+        branches = repositories.branches(self.selected_repository)
+        if not branches:
+            self.set_diff("No local branches available to push.")
+            return
+        self.push_screen(PushScreen(branches), self.push_branch)
+
+    def push_branch(self, branch: Optional[str]) -> None:
+        if branch is None or self.selected_repository is None:
+            return
+        result = repositories.push(self.selected_repository, branch)
         self.show_status()
         self.set_diff(result)
 

@@ -54,6 +54,25 @@ class RepositoryTests(unittest.TestCase):
         run_git.assert_called_once_with(Path("."), "commit", "-m", "Add feature")
 
     @patch("git_cli.repositories.run_git")
+    def test_lists_local_branches(self, run_git: object) -> None:
+        run_git.return_value.returncode = 0
+        run_git.return_value.stdout = "main\nfeature/test\n"
+
+        result = repositories.branches(Path("."))
+
+        self.assertEqual(result, ["main", "feature/test"])
+        run_git.assert_called_once_with(Path("."), "branch", "--format=%(refname:short)")
+
+    @patch("git_cli.repositories.run_git")
+    def test_pushes_selected_branch(self, run_git: object) -> None:
+        run_git.return_value.stdout = "branch 'main' set up to track 'origin/main'.\n"
+
+        result = repositories.push(Path("."), "main")
+
+        self.assertEqual(result, "branch 'main' set up to track 'origin/main'.")
+        run_git.assert_called_once_with(Path("."), "push", "-u", "origin", "main")
+
+    @patch("git_cli.repositories.run_git")
     def test_reads_diff_for_tracked_file(self, run_git: object) -> None:
         run_git.return_value.stdout = "diff --git a/README.md b/README.md\n"
         change = repositories.Change(" M", "README.md")

@@ -106,6 +106,18 @@ def commit(path: Path, message: str) -> str:
     return result.stdout.strip() or result.stderr.strip() or "Commit completed."
 
 
+def branches(path: Path) -> list[str]:
+    result = run_git(path, "branch", "--format=%(refname:short)")
+    if result.returncode != 0:
+        return []
+    return [branch for branch in result.stdout.splitlines() if branch]
+
+
+def push(path: Path, branch: str) -> str:
+    result = run_git(path, "push", "-u", "origin", branch)
+    return result.stdout.strip() or result.stderr.strip() or "Push completed."
+
+
 def diff(path: Path, change: Change) -> str:
     if change.code == "??":
         return "Untracked files do not have a Git diff. Stage the file first."
