@@ -82,6 +82,121 @@ class PushScreen(ModalScreen[Optional[str]]):
         return self.branches[index]
 
 
+class ConfirmCloseScreen(ModalScreen[bool]):
+    CSS = """
+    ConfirmCloseScreen { align: center middle; }
+    #close-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #close-actions { height: 3; align: center middle; }
+    #close-actions Button { margin: 0 1; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="close-dialog"):
+            yield Label("Close this GitHub issue?")
+            yield Static("This changes the issue state on GitHub.")
+            with Horizontal(id="close-actions"):
+                yield Button("Close issue", id="confirm-close")
+                yield Button("Cancel", id="cancel-close")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        self.dismiss(event.button.id == "confirm-close")
+
+
+class IssueDetailScreen(ModalScreen[None]):
+    CSS = """
+    IssueDetailScreen { align: center middle; }
+    #issue-dialog { width: 100; height: 32; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #issue-content { height: 1fr; margin-top: 1; border: tall #426f58; }
+    #issue-actions { height: 3; }
+    #issue-actions Button { margin: 0 1; }
+    """
+
+    def __init__(self, repository: str, issue_number: int) -> None:
+        super().__init__()
+        self.repository = repository
+        self.issue_number = issue_number
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="issue-dialog"):
+            yield Static("Loading issue...", id="issue-title")
+            yield RichLog(id="issue-content", wrap=True)
+            with Horizontal(id="issue-actions"):
+                yield Button("Reply", id="reply-issue")
+                yield Button("Close issue", id="close-issue")
+                yield Button("Back", id="back-issue")
+
+    def on_mount(self) -> None:
+        self.refresh_issue()
+
+    def refresh_issue(self) -> None:
+        issue, message = github.issue(self.repository, self.issue_number)
+        content = self.query_one("#issue-content", RichLog)
+        content.clear()
+        if issue is None:
+            self.query_one("#issue-title", Static).update(message)
+            return
+        self.query_one("#issue-title", Static).update(f"#{issue.number} [{issue.state}] {issue.title}")
+        content.write(issue.body or "No description.")
+        for comment in issue.comments:
+            content.write("\n---\n" + comment)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "reply-issue":
+            self.app.push_screen(CommitScreen(), self.add_comment)
+        elif event.button.id == "close-issue":
+            self.app.push_screen(ConfirmCloseScreen(), self.close_issue)
+        else:
+            self.dismiss()
+
+    def add_comment(self, message: Optional[str]) -> None:
+        if message:
+            result = github.comment(self.repository, self.issue_number, message)
+            self.query_one("#issue-content", RichLog).write("\n" + result)
+            self.refresh_issue()
+
+    def close_issue(self, confirmed: bool) -> None:
+        if confirmed:
+            result = github.close(self.repository, self.issue_number)
+            self.query_one("#issue-content", RichLog).write("\n" + result)
+            self.refresh_issue()
+
+
+class IssuesScreen(ModalScreen[None]):
+    CSS = """
+    IssuesScreen { align: center middle; }
+    #issues-dialog { width: 80; height: 24; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #issues-list { height: 1fr; margin-top: 1; border: tall #426f58; }
+    """
+
+    def __init__(self, repository: str, issues: list[github.Issue], message: str) -> None:
+        super().__init__()
+        self.repository = repository
+        self.issues = issues
+        self.message = message
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="issues-dialog"):
+            yield Label("GitHub issues")
+            if self.message:
+                yield Static(self.message)
+            elif not self.issues:
+                yield Static("No open issues.")
+            else:
+                with ListView(id="issues-list"):
+                    for issue in self.issues:
+                        yield ListItem(Label(f"#{issue.number} [{issue.state}] {issue.title}"))
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        index = event.list_view.index
+        if index is not None and index < len(self.issues):
+            self.app.push_screen(IssueDetailScreen(self.repository, self.issues[index].number))
+
+    def on_key(self, event: Key) -> None:
+        if event.key in ("escape", "q"):
+            event.stop()
+            self.dismiss()
+
+
 class GitCliApp(App[None]):
     TITLE = "Git CLI"
     BINDINGS = [
@@ -92,6 +207,7 @@ class GitCliApp(App[None]):
         ("s", "stage_changes", "Stage"),
         ("c", "commit", "Commit"),
         ("p", "push", "Push"),
+        ("i", "issues", "Issues"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
         ("ctrl+w,h", "focus_repositories", "Repositories"),
@@ -271,6 +387,16 @@ class GitCliApp(App[None]):
         result = repositories.commit(self.selected_repository, message)
         self.show_status()
         self.set_diff(result)
+
+    def action_issues(self) -> None:
+        if self.selected_repository is None:
+            return
+        github_repository = repositories.github_repository(self.selected_repository)
+        if not github_repository:
+            self.push_screen(IssuesScreen("", [], "Repository has no GitHub origin remote."))
+            return
+        issue_list, message = github.issues(github_repository)
+        self.push_screen(IssuesScreen(github_repository, issue_list, message))
 
     def action_push(self) -> None:
         if self.selected_repository is None:

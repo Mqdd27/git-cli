@@ -106,6 +106,18 @@ def commit(path: Path, message: str) -> str:
     return result.stdout.strip() or result.stderr.strip() or "Commit completed."
 
 
+def github_repository(path: Path) -> str:
+    result = run_git(path, "remote", "get-url", "origin")
+    if result.returncode != 0:
+        return ""
+    url = result.stdout.strip().removesuffix(".git")
+    if url.startswith("git@github.com:"):
+        return url.removeprefix("git@github.com:")
+    if url.startswith("https://github.com/"):
+        return url.removeprefix("https://github.com/")
+    return ""
+
+
 def branches(path: Path) -> list[str]:
     result = run_git(path, "branch", "--format=%(refname:short)")
     if result.returncode != 0:

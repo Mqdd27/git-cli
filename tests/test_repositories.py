@@ -54,6 +54,15 @@ class RepositoryTests(unittest.TestCase):
         run_git.assert_called_once_with(Path("."), "commit", "-m", "Add feature")
 
     @patch("git_cli.repositories.run_git")
+    def test_reads_github_origin(self, run_git: object) -> None:
+        run_git.return_value.returncode = 0
+        run_git.return_value.stdout = "git@github.com:owner/repository.git\n"
+
+        result = repositories.github_repository(Path("."))
+
+        self.assertEqual(result, "owner/repository")
+
+    @patch("git_cli.repositories.run_git")
     def test_lists_local_branches(self, run_git: object) -> None:
         run_git.return_value.returncode = 0
         run_git.return_value.stdout = "main\nfeature/test\n"
