@@ -221,9 +221,9 @@ class IssueDetailScreen(ModalScreen[None]):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "reply-issue":
-            self.app.push_screen(CommitScreen(), self.add_comment)
+            self.app.push_themed_screen(CommitScreen(), self.add_comment)
         elif event.button.id == "close-issue":
-            self.app.push_screen(ConfirmCloseScreen(), self.close_issue)
+            self.app.push_themed_screen(ConfirmCloseScreen(), self.close_issue)
         else:
             self.dismiss()
 
@@ -276,6 +276,34 @@ class IssuesScreen(ModalScreen[None]):
             self.dismiss()
 
 
+class ThemeScreen(ModalScreen[Optional[str]]):
+    CSS = """
+    ThemeScreen { align: center middle; }
+    #theme-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #theme-list { height: 8; margin-top: 1; border: tall #426f58; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="theme-dialog"):
+            yield Label("Select theme")
+            with ListView(id="theme-list"):
+                yield ListItem(Label("Forest"))
+                yield ListItem(Label("Midnight"))
+                yield ListItem(Label("Light"))
+                yield ListItem(Label("Rosé Pine"))
+                yield ListItem(Label("Catppuccin Mocha"))
+
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
+        themes = ("forest", "midnight", "light", "rose-pine", "catppuccin")
+        index = event.list_view.index
+        self.dismiss(themes[index] if index is not None else None)
+
+    def on_key(self, event: Key) -> None:
+        if event.key in ("escape", "q"):
+            event.stop()
+            self.dismiss(None)
+
+
 class GitCliApp(App[None]):
     TITLE = "Git CLI"
     BINDINGS = [
@@ -289,6 +317,7 @@ class GitCliApp(App[None]):
         ("p", "push", "Push"),
         ("P", "pull", "Pull"),
         ("i", "issues", "Issues"),
+        ("T", "theme", "Theme"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
         ("ctrl+w", "window_prefix", "Window"),
@@ -305,9 +334,9 @@ class GitCliApp(App[None]):
     #content, #setup { width: 70%; background: #1c2923; border: tall #426f58; padding: 1 2; }
     #content { height: 1fr; }
     #repository-title { color: #f5eed8; text-style: bold; }
-    #changes { height: 12; margin-top: 1; border: tall #426f58; overflow-y: auto; }
+    #changes { height: 12; margin-top: 1; border: tall #426f58; overflow-y: auto; background: #1c2923; }
     #changes > ListItem.selected { background: #365f79; color: #fff8df; }
-    #diff { height: 1fr; margin-top: 1; color: #f5eed8; border: tall #426f58; }
+    #diff { height: 1fr; margin-top: 1; color: #f5eed8; border: tall #426f58; background: #1c2923; }
     #diff:focus { border: tall #d49a3a; background: #142018; }
     ListView > ListItem { padding: 0 1; }
     ListView > ListItem:hover { background: #3a684f; }
@@ -318,11 +347,97 @@ class GitCliApp(App[None]):
     Button { background: #3a684f; color: #fff8df; border: none; margin-top: 1; }
     Button:hover, Button:focus { background: #d49a3a; color: #1b241f; }
     #import-status { color: #d9c48d; }
+
+    Screen.midnight { background: #111827; color: #dbeafe; }
+    Screen.midnight Footer, Screen.midnight #topbar { background: #1e293b; color: #94a3b8; }
+    Screen.midnight #repos { background: #172554; border: tall #38bdf8; }
+    Screen.midnight #content, Screen.midnight #setup { background: #172033; border: tall #475569; }
+    Screen.midnight #changes, Screen.midnight #diff { background: #0f172a; border: tall #475569; }
+    Screen.midnight #diff:focus { border: tall #f59e0b; background: #111827; }
+    Screen.midnight ListView > ListItem:hover, Screen.midnight Button { background: #1d4ed8; }
+    Screen.midnight ListView > ListItem.--highlight, Screen.midnight Button:hover, Screen.midnight Button:focus { background: #f59e0b; color: #111827; }
+    Screen.midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
+    Screen.midnight Input:focus { border: tall #f59e0b; }
+    Screen.midnight Label, Screen.midnight #import-status { color: #fde68a; }
+    Screen.midnight #changes > ListItem.selected { background: #1e3a5f; color: #dbeafe; }
+    Screen.midnight RichLog { color: #dbeafe; }
+
+    Screen.light { background: #f8fafc; color: #1e293b; }
+    Screen.light Footer, Screen.light #topbar { background: #e2e8f0; color: #475569; }
+    Screen.light #title, Screen.light #repository-title { color: #0f172a; }
+    Screen.light #repos { background: #f1f5f9; border: tall #2563eb; color: #1e293b; }
+    Screen.light #content, Screen.light #setup { background: #ffffff; border: tall #94a3b8; color: #1e293b; }
+    Screen.light #changes, Screen.light #diff { background: #ffffff; border: tall #cbd5e1; color: #1e293b; }
+    Screen.light #diff:focus { border: tall #d97706; background: #fff7ed; }
+    Screen.light ListView > ListItem:hover, Screen.light Button { background: #2563eb; color: #ffffff; }
+    Screen.light ListView > ListItem.--highlight, Screen.light Button:hover, Screen.light Button:focus { background: #d97706; color: #ffffff; }
+    Screen.light Input { background: #ffffff; border: tall #2563eb; color: #1e293b; }
+    Screen.light Input:focus { border: tall #d97706; }
+    Screen.light Label, Screen.light #import-status { color: #92400e; }
+    Screen.light #changes > ListItem.selected { background: #dbeafe; color: #1e3a8a; }
+    Screen.light RichLog { color: #1e293b; }
+
+    .modal--midnight { background: #172033; color: #dbeafe; border: tall #38bdf8; }
+    .modal--midnight ListView { background: #0f172a; border: tall #475569; }
+    .modal--midnight RichLog { background: #0f172a; border: tall #475569; color: #dbeafe; }
+    .modal--midnight Button { background: #1d4ed8; color: #ffffff; }
+    .modal--midnight Button:hover, .modal--midnight Button:focus { background: #f59e0b; color: #111827; }
+    .modal--midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
+
+    .modal--light { background: #ffffff; color: #1e293b; border: tall #2563eb; }
+    .modal--light ListView { background: #f8fafc; border: tall #94a3b8; }
+    .modal--light RichLog { background: #f8fafc; border: tall #94a3b8; color: #1e293b; }
+    .modal--light Button { background: #2563eb; color: #ffffff; }
+    .modal--light Button:hover, .modal--light Button:focus { background: #d97706; color: #ffffff; }
+    .modal--light Input { background: #ffffff; border: tall #2563eb; color: #1e293b; }
+
+    Screen.rose-pine { background: #191724; color: #e0def4; }
+    Screen.rose-pine Footer, Screen.rose-pine #topbar { background: #26233a; color: #908caa; }
+    Screen.rose-pine #title, Screen.rose-pine #repository-title { color: #e0def4; }
+    Screen.rose-pine #github-status { color: #9ccfd8; }
+    Screen.rose-pine #repos { background: #1f1d2e; border: tall #c4a7e7; }
+    Screen.rose-pine #content, Screen.rose-pine #setup { background: #1f1d2e; border: tall #403d52; }
+    Screen.rose-pine #changes, Screen.rose-pine #diff { background: #191724; border: tall #403d52; }
+    Screen.rose-pine #diff:focus { border: tall #ebbcba; background: #26233a; }
+    Screen.rose-pine ListView > ListItem:hover, Screen.rose-pine Button { background: #403d52; color: #e0def4; }
+    Screen.rose-pine ListView > ListItem.--highlight, Screen.rose-pine Button:hover, Screen.rose-pine Button:focus { background: #c4a7e7; color: #191724; }
+    Screen.rose-pine Input { background: #191724; border: tall #9ccfd8; color: #e0def4; }
+    Screen.rose-pine Input:focus { border: tall #ebbcba; }
+    Screen.rose-pine Label, Screen.rose-pine #import-status { color: #f6c177; }
+    Screen.rose-pine #changes > ListItem.selected { background: #524f67; color: #e0def4; }
+    Screen.rose-pine RichLog { color: #e0def4; }
+
+    Screen.catppuccin { background: #1e1e2e; color: #cdd6f4; }
+    Screen.catppuccin Footer, Screen.catppuccin #topbar { background: #181825; color: #a6adc8; }
+    Screen.catppuccin #title, Screen.catppuccin #repository-title { color: #cdd6f4; }
+    Screen.catppuccin #github-status { color: #94e2d5; }
+    Screen.catppuccin #repos { background: #181825; border: tall #cba6f7; }
+    Screen.catppuccin #content, Screen.catppuccin #setup { background: #181825; border: tall #45475a; }
+    Screen.catppuccin #changes, Screen.catppuccin #diff { background: #1e1e2e; border: tall #45475a; }
+    Screen.catppuccin #diff:focus { border: tall #f9e2af; background: #313244; }
+    Screen.catppuccin ListView > ListItem:hover, Screen.catppuccin Button { background: #45475a; color: #cdd6f4; }
+    Screen.catppuccin ListView > ListItem.--highlight, Screen.catppuccin Button:hover, Screen.catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
+    Screen.catppuccin Input { background: #1e1e2e; border: tall #94e2d5; color: #cdd6f4; }
+    Screen.catppuccin Input:focus { border: tall #f9e2af; }
+    Screen.catppuccin Label, Screen.catppuccin #import-status { color: #f9e2af; }
+    Screen.catppuccin #changes > ListItem.selected { background: #585b70; color: #cdd6f4; }
+    Screen.catppuccin RichLog { color: #cdd6f4; }
+
+    .modal--rose-pine { background: #1f1d2e; color: #e0def4; border: tall #c4a7e7; }
+    .modal--rose-pine ListView, .modal--rose-pine RichLog, .modal--rose-pine Input { background: #191724; border: tall #403d52; color: #e0def4; }
+    .modal--rose-pine Button { background: #403d52; color: #e0def4; }
+    .modal--rose-pine Button:hover, .modal--rose-pine Button:focus { background: #c4a7e7; color: #191724; }
+
+    .modal--catppuccin { background: #181825; color: #cdd6f4; border: tall #cba6f7; }
+    .modal--catppuccin ListView, .modal--catppuccin RichLog, .modal--catppuccin Input { background: #1e1e2e; border: tall #45475a; color: #cdd6f4; }
+    .modal--catppuccin Button { background: #45475a; color: #cdd6f4; }
+    .modal--catppuccin Button:hover, .modal--catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
     """
 
     def __init__(self) -> None:
         super().__init__()
         self.repositories = repositories.load()
+        self.color_theme = repositories.load_theme()
         self.selected_repository: Optional[Path] = None
         self.changes: list[repositories.Change] = []
         self.selected_change_indexes: set[int] = set()
@@ -351,6 +466,7 @@ class GitCliApp(App[None]):
         yield Footer()
 
     def on_mount(self) -> None:
+        self.apply_theme(self.color_theme)
         self.refresh_repositories()
         self.show_github_status()
         self.query_one("#setup", Vertical).display = not self.repositories
@@ -511,7 +627,7 @@ class GitCliApp(App[None]):
         indexes = self.selected_change_indexes or self.current_change_index()
         if not indexes:
             return
-        self.push_screen(DiscardScreen(len(indexes)), lambda confirmed: self.discard_changes(indexes, confirmed))
+        self.push_themed_screen(DiscardScreen(len(indexes)), lambda confirmed: self.discard_changes(indexes, confirmed))
 
     def discard_changes(self, indexes: set[int], confirmed: bool) -> None:
         if not confirmed or self.selected_repository is None:
@@ -537,7 +653,7 @@ class GitCliApp(App[None]):
     def action_commit(self) -> None:
         if self.selected_repository is None:
             return
-        self.push_screen(CommitScreen(), self.commit_changes)
+        self.push_themed_screen(CommitScreen(), self.commit_changes)
 
     def commit_changes(self, message: Optional[str]) -> None:
         if message is None or self.selected_repository is None:
@@ -546,10 +662,27 @@ class GitCliApp(App[None]):
         self.show_status()
         self.set_diff(result)
 
+    def push_themed_screen(self, screen: ModalScreen, callback: object = None) -> None:
+        if self.color_theme != "forest":
+            screen.add_class(f"modal--{self.color_theme}")
+        self.push_screen(screen, callback)
+
+    def action_theme(self) -> None:
+        self.push_themed_screen(ThemeScreen(), self.apply_theme)
+
+    def apply_theme(self, theme: Optional[str]) -> None:
+        if theme not in ("forest", "midnight", "light", "rose-pine", "catppuccin"):
+            return
+        self.screen.remove_class("midnight", "light", "rose-pine", "catppuccin")
+        if theme != "forest":
+            self.screen.add_class(theme)
+        self.color_theme = theme
+        repositories.save_theme(theme)
+
     def action_undo_commit(self) -> None:
         if self.selected_repository is None:
             return
-        self.push_screen(UndoCommitScreen(), self.undo_commit)
+        self.push_themed_screen(UndoCommitScreen(), self.undo_commit)
 
     def undo_commit(self, confirmed: bool) -> None:
         if not confirmed or self.selected_repository is None:
@@ -573,7 +706,7 @@ class GitCliApp(App[None]):
             self.set_diff(f"Pull result\n\n{result}")
             return
         self.set_diff(f"Fast-forward pull was not possible.\n\n{result}")
-        self.push_screen(PullStrategyScreen(), self.run_pull_strategy)
+        self.push_themed_screen(PullStrategyScreen(), self.run_pull_strategy)
 
     def run_pull_strategy(self, rebase: Optional[bool]) -> None:
         if rebase is None or self.selected_repository is None:
@@ -595,10 +728,10 @@ class GitCliApp(App[None]):
             return
         github_repository = repositories.github_repository(self.selected_repository)
         if not github_repository:
-            self.push_screen(IssuesScreen("", [], "Repository has no GitHub origin remote."))
+            self.push_themed_screen(IssuesScreen("", [], "Repository has no GitHub origin remote."))
             return
         issue_list, message = github.issues(github_repository)
-        self.push_screen(IssuesScreen(github_repository, issue_list, message))
+        self.push_themed_screen(IssuesScreen(github_repository, issue_list, message))
 
     def action_push(self) -> None:
         if self.selected_repository is None:
@@ -607,7 +740,7 @@ class GitCliApp(App[None]):
         if not branches:
             self.set_diff("No local branches available to push.")
             return
-        self.push_screen(PushScreen(branches), self.push_branch)
+        self.push_themed_screen(PushScreen(branches), self.push_branch)
 
     def push_branch(self, branch: Optional[str]) -> None:
         if branch is None or self.selected_repository is None:

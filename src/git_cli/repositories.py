@@ -25,12 +25,31 @@ class RepositoryStatus:
     changes: list[Change]
 
 
-def registry_path() -> Path:
+def config_directory() -> Path:
     if platform.system() == "Darwin":
-        base = Path.home() / "Library" / "Application Support"
-    else:
-        base = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
-    return base / "git-cli" / "repos.json"
+        return Path.home() / "Library" / "Application Support" / "git-cli"
+    return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "git-cli"
+
+
+def registry_path() -> Path:
+    return config_directory() / "repos.json"
+
+
+def preferences_path() -> Path:
+    return config_directory() / "preferences.json"
+
+
+def load_theme() -> str:
+    try:
+        return json.loads(preferences_path().read_text()).get("theme", "forest")
+    except (OSError, json.JSONDecodeError):
+        return "forest"
+
+
+def save_theme(theme: str) -> None:
+    path = preferences_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({"theme": theme}) + "\n")
 
 
 def load() -> list[Path]:
