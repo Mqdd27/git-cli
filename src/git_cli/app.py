@@ -410,9 +410,15 @@ class GitCliApp(App[None]):
     def push_branch(self, branch: Optional[str]) -> None:
         if branch is None or self.selected_repository is None:
             return
+        self.set_diff(f"Preparing push to origin/{branch}...\n\nRunning: git push -u origin {branch}")
+        self.call_after_refresh(self.run_push, branch)
+
+    def run_push(self, branch: str) -> None:
+        if self.selected_repository is None:
+            return
         result = repositories.push(self.selected_repository, branch)
         self.show_status()
-        self.set_diff(result)
+        self.set_diff(f"Push to origin/{branch}\n\n{result}")
 
     def current_change_index(self) -> set[int]:
         index = self.query_one("#changes", ListView).index
