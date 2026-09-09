@@ -13,7 +13,7 @@ from git_cli import github, repositories
 class CommitScreen(ModalScreen[Optional[str]]):
     CSS = """
     CommitScreen { align: center middle; }
-    #commit-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #commit-dialog { width: 60; height: auto; padding: 1 2; }
     #commit-message { margin-top: 1; }
     #commit-actions { height: 3; align: center middle; }
     #commit-actions Button { margin: 0 1; }
@@ -43,8 +43,8 @@ class CommitScreen(ModalScreen[Optional[str]]):
 class PushScreen(ModalScreen[Optional[str]]):
     CSS = """
     PushScreen { align: center middle; }
-    #push-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
-    #push-branches { height: 10; margin-top: 1; border: tall #426f58; }
+    #push-dialog { width: 60; height: auto; padding: 1 2; }
+    #push-branches { height: 10; margin-top: 1;  }
     #push-actions { height: 3; align: center middle; }
     #push-actions Button { margin: 0 1; }
     """
@@ -85,7 +85,7 @@ class PushScreen(ModalScreen[Optional[str]]):
 class UndoCommitScreen(ModalScreen[bool]):
     CSS = """
     UndoCommitScreen { align: center middle; }
-    #undo-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #undo-dialog { width: 70; height: auto; padding: 1 2; }
     #undo-actions { height: 3; align: center middle; }
     #undo-actions Button { margin: 0 1; }
     """
@@ -108,7 +108,7 @@ class UndoCommitScreen(ModalScreen[bool]):
 class DiscardScreen(ModalScreen[bool]):
     CSS = """
     DiscardScreen { align: center middle; }
-    #discard-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #discard-dialog { width: 70; height: auto; padding: 1 2; }
     #discard-actions { height: 3; align: center middle; }
     #discard-actions Button { margin: 0 1; }
     """
@@ -135,7 +135,7 @@ class DiscardScreen(ModalScreen[bool]):
 class PullStrategyScreen(ModalScreen[Optional[bool]]):
     CSS = """
     PullStrategyScreen { align: center middle; }
-    #pull-dialog { width: 70; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #pull-dialog { width: 70; height: auto; padding: 1 2; }
     #pull-actions { height: 3; align: center middle; }
     #pull-actions Button { margin: 0 1; }
     """
@@ -164,7 +164,7 @@ class PullStrategyScreen(ModalScreen[Optional[bool]]):
 class ConfirmCloseScreen(ModalScreen[bool]):
     CSS = """
     ConfirmCloseScreen { align: center middle; }
-    #close-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
+    #close-dialog { width: 60; height: auto; padding: 1 2; }
     #close-actions { height: 3; align: center middle; }
     #close-actions Button { margin: 0 1; }
     """
@@ -184,8 +184,8 @@ class ConfirmCloseScreen(ModalScreen[bool]):
 class IssueDetailScreen(ModalScreen[None]):
     CSS = """
     IssueDetailScreen { align: center middle; }
-    #issue-dialog { width: 100; height: 32; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
-    #issue-content { height: 1fr; margin-top: 1; border: tall #426f58; }
+    #issue-dialog { width: 100; height: 32; padding: 1 2; }
+    #issue-content { height: 1fr; margin-top: 1;  }
     #issue-actions { height: 3; }
     #issue-actions Button { margin: 0 1; }
     """
@@ -243,8 +243,8 @@ class IssueDetailScreen(ModalScreen[None]):
 class IssuesScreen(ModalScreen[None]):
     CSS = """
     IssuesScreen { align: center middle; }
-    #issues-dialog { width: 80; height: 24; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
-    #issues-list { height: 1fr; margin-top: 1; border: tall #426f58; }
+    #issues-dialog { width: 80; height: 24; padding: 1 2; }
+    #issues-list { height: 1fr; margin-top: 1;  }
     """
 
     def __init__(self, repository: str, issues: list[github.Issue], message: str) -> None:
@@ -268,7 +268,7 @@ class IssuesScreen(ModalScreen[None]):
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         index = event.list_view.index
         if index is not None and index < len(self.issues):
-            self.app.push_screen(IssueDetailScreen(self.repository, self.issues[index].number))
+            self.app.push_themed_screen(IssueDetailScreen(self.repository, self.issues[index].number))
 
     def on_key(self, event: Key) -> None:
         if event.key in ("escape", "q"):
@@ -279,8 +279,8 @@ class IssuesScreen(ModalScreen[None]):
 class ThemeScreen(ModalScreen[Optional[str]]):
     CSS = """
     ThemeScreen { align: center middle; }
-    #theme-dialog { width: 60; height: auto; background: #1c2923; border: tall #d49a3a; padding: 1 2; }
-    #theme-list { height: 8; margin-top: 1; border: tall #426f58; }
+    #theme-dialog { width: 60; height: auto; padding: 1 2; }
+    #theme-list { height: 8; margin-top: 1;  }
     """
 
     def compose(self) -> ComposeResult:
@@ -330,16 +330,16 @@ class GitCliApp(App[None]):
     #topbar { grid-size: 3 1; grid-columns: 1fr auto 1fr; height: 1; padding: 0 1; }
     #title { color: #fff8df; text-align: center; text-style: bold; }
     #github-status { color: #8ed0a8; }
-    #repos { width: 30%; background: #203128; border: tall #5fa77a; }
-    #content, #setup { width: 70%; background: #1c2923; border: tall #426f58; padding: 1 2; }
+    #repos { width: 30%; background: #203128; border: tall #5fa77a; color: #e8eadf; }
+    #content, #setup { width: 70%; background: #1c2923; border: tall #426f58; padding: 1 2; color: #e8eadf; }
     #content { height: 1fr; }
     #repository-title { color: #f5eed8; text-style: bold; }
-    #changes { height: 12; margin-top: 1; border: tall #426f58; overflow-y: auto; background: #1c2923; }
+    #changes { height: 12; margin-top: 1; border: tall #426f58; overflow-y: auto; background: #1c2923; color: #e8eadf; }
     #changes > ListItem.selected { background: #365f79; color: #fff8df; }
     #diff { height: 1fr; margin-top: 1; color: #f5eed8; border: tall #426f58; background: #1c2923; }
     #diff:focus { border: tall #d49a3a; background: #142018; }
     ListView > ListItem { padding: 0 1; }
-    ListView > ListItem:hover { background: #3a684f; }
+    ListView > ListItem:hover { background: #3a684f; color: #fff8df; }
     ListView > ListItem.--highlight { background: #d49a3a; color: #1b241f; text-style: bold; }
     Label { color: #d9c48d; text-style: bold; }
     Input { border: tall #5fa77a; background: #142018; color: #f5eed8; }
@@ -347,27 +347,40 @@ class GitCliApp(App[None]):
     Button { background: #3a684f; color: #fff8df; border: none; margin-top: 1; }
     Button:hover, Button:focus { background: #d49a3a; color: #1b241f; }
     #import-status { color: #d9c48d; }
-    Footer { background: #24342d; color: #b8c8b9; }
+
+    .modal--forest > * { background: #1c2923; border: tall #d49a3a; }
+    .modal--forest ListView, .modal--forest RichLog { background: #1c2923; border: tall #426f58; }
 
     Screen.midnight { background: #111827; color: #dbeafe; }
     Screen.midnight Footer, Screen.midnight #topbar { background: #1e293b; color: #94a3b8; }
-    Screen.midnight #repos { background: #172554; border: tall #38bdf8; }
-    Screen.midnight #content, Screen.midnight #setup { background: #172033; border: tall #475569; }
-    Screen.midnight #changes, Screen.midnight #diff { background: #0f172a; border: tall #475569; }
+    Screen.midnight #title, Screen.midnight #repository-title { color: #e2e8f0; }
+    Screen.midnight #github-status { color: #60a5fa; }
+    Screen.midnight #repos { background: #172554; border: tall #38bdf8; color: #dbeafe; }
+    Screen.midnight #content, Screen.midnight #setup { background: #172033; border: tall #475569; color: #dbeafe; }
+    Screen.midnight #changes, Screen.midnight #diff { background: #0f172a; border: tall #475569; color: #dbeafe; }
     Screen.midnight #diff:focus { border: tall #f59e0b; background: #111827; }
-    Screen.midnight ListView > ListItem:hover, Screen.midnight Button { background: #1d4ed8; }
+    Screen.midnight ListView > ListItem:hover, Screen.midnight Button { background: #1d4ed8; color: #ffffff; }
     Screen.midnight ListView > ListItem.--highlight, Screen.midnight Button:hover, Screen.midnight Button:focus { background: #f59e0b; color: #111827; }
     Screen.midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
     Screen.midnight Input:focus { border: tall #f59e0b; }
     Screen.midnight Label, Screen.midnight #import-status { color: #fde68a; }
     Screen.midnight #changes > ListItem.selected { background: #1e3a5f; color: #dbeafe; }
-    Screen.midnight RichLog { color: #dbeafe; }
+
+    .modal--midnight { background: #172033; color: #dbeafe; }
+    .modal--midnight > * { background: #172033; border: tall #38bdf8; color: #dbeafe; }
+    .modal--midnight ListView, .modal--midnight RichLog { background: #0f172a; border: tall #475569; color: #dbeafe; }
+    .modal--midnight ListView > ListItem:hover, .modal--midnight Button { background: #1d4ed8; color: #ffffff; }
+    .modal--midnight ListView > ListItem.--highlight, .modal--midnight Button:hover, .modal--midnight Button:focus { background: #f59e0b; color: #111827; }
+    .modal--midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
+    .modal--midnight Input:focus { border: tall #f59e0b; }
+    .modal--midnight Label { color: #fde68a; }
 
     Screen.light { background: #f8fafc; color: #1e293b; }
     Screen.light Footer, Screen.light #topbar { background: #e2e8f0; color: #475569; }
     Screen.light #title, Screen.light #repository-title { color: #0f172a; }
+    Screen.light #github-status { color: #4f46e5; }
     Screen.light #repos { background: #f1f5f9; border: tall #2563eb; color: #1e293b; }
-    Screen.light #content, Screen.light #setup { background: #ffffff; border: tall #94a3b8; color: #1e293b; }
+    Screen.light #content, Screen.light #setup { background: #ffffff; border: tall #cbd5e1; color: #1e293b; }
     Screen.light #changes, Screen.light #diff { background: #ffffff; border: tall #cbd5e1; color: #1e293b; }
     Screen.light #diff:focus { border: tall #d97706; background: #fff7ed; }
     Screen.light ListView > ListItem:hover, Screen.light Button { background: #2563eb; color: #ffffff; }
@@ -376,24 +389,12 @@ class GitCliApp(App[None]):
     Screen.light Input:focus { border: tall #d97706; }
     Screen.light Label, Screen.light #import-status { color: #92400e; }
     Screen.light #changes > ListItem.selected { background: #dbeafe; color: #1e3a8a; }
-    Screen.light RichLog { color: #1e293b; }
 
-    .modal--midnight { background: #172033; color: #dbeafe; border: tall #38bdf8; }
-    .modal--midnight ListView, .modal--midnight RichLog { background: #0f172a; border: tall #475569; color: #dbeafe; }
-    .modal--midnight ListView > ListItem:hover { background: #1d4ed8; }
-    .modal--midnight ListView > ListItem.--highlight { background: #f59e0b; color: #111827; }
-    .modal--midnight Button { background: #1d4ed8; color: #ffffff; }
-    .modal--midnight Button:hover, .modal--midnight Button:focus { background: #f59e0b; color: #111827; }
-    .modal--midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
-    .modal--midnight Input:focus { border: tall #f59e0b; }
-    .modal--midnight Label { color: #fde68a; }
-
-    .modal--light { background: #ffffff; color: #1e293b; border: tall #2563eb; }
+    .modal--light { background: #ffffff; color: #1e293b; }
+    .modal--light > * { background: #ffffff; border: tall #2563eb; color: #1e293b; }
     .modal--light ListView, .modal--light RichLog { background: #f8fafc; border: tall #cbd5e1; color: #1e293b; }
-    .modal--light ListView > ListItem:hover { background: #2563eb; }
-    .modal--light ListView > ListItem.--highlight { background: #d97706; }
-    .modal--light Button { background: #2563eb; color: #ffffff; }
-    .modal--light Button:hover, .modal--light Button:focus { background: #d97706; color: #ffffff; }
+    .modal--light ListView > ListItem:hover, .modal--light Button { background: #2563eb; color: #ffffff; }
+    .modal--light ListView > ListItem.--highlight, .modal--light Button:hover, .modal--light Button:focus { background: #d97706; color: #ffffff; }
     .modal--light Input { background: #ffffff; border: tall #2563eb; color: #1e293b; }
     .modal--light Input:focus { border: tall #d97706; }
     .modal--light Label { color: #92400e; }
@@ -402,9 +403,9 @@ class GitCliApp(App[None]):
     Screen.rose-pine Footer, Screen.rose-pine #topbar { background: #26233a; color: #908caa; }
     Screen.rose-pine #title, Screen.rose-pine #repository-title { color: #e0def4; }
     Screen.rose-pine #github-status { color: #9ccfd8; }
-    Screen.rose-pine #repos { background: #1f1d2e; border: tall #c4a7e7; }
-    Screen.rose-pine #content, Screen.rose-pine #setup { background: #1f1d2e; border: tall #403d52; }
-    Screen.rose-pine #changes, Screen.rose-pine #diff { background: #191724; border: tall #403d52; }
+    Screen.rose-pine #repos { background: #1f1d2e; border: tall #c4a7e7; color: #e0def4; }
+    Screen.rose-pine #content, Screen.rose-pine #setup { background: #1f1d2e; border: tall #403d52; color: #e0def4; }
+    Screen.rose-pine #changes, Screen.rose-pine #diff { background: #191724; border: tall #403d52; color: #e0def4; }
     Screen.rose-pine #diff:focus { border: tall #ebbcba; background: #26233a; }
     Screen.rose-pine ListView > ListItem:hover, Screen.rose-pine Button { background: #403d52; color: #e0def4; }
     Screen.rose-pine ListView > ListItem.--highlight, Screen.rose-pine Button:hover, Screen.rose-pine Button:focus { background: #c4a7e7; color: #191724; }
@@ -412,15 +413,23 @@ class GitCliApp(App[None]):
     Screen.rose-pine Input:focus { border: tall #ebbcba; }
     Screen.rose-pine Label, Screen.rose-pine #import-status { color: #f6c177; }
     Screen.rose-pine #changes > ListItem.selected { background: #524f67; color: #e0def4; }
-    Screen.rose-pine RichLog { color: #e0def4; }
+
+    .modal--rose-pine { background: #1f1d2e; color: #e0def4; }
+    .modal--rose-pine > * { background: #1f1d2e; border: tall #c4a7e7; color: #e0def4; }
+    .modal--rose-pine ListView, .modal--rose-pine RichLog { background: #191724; border: tall #403d52; color: #e0def4; }
+    .modal--rose-pine ListView > ListItem:hover, .modal--rose-pine Button { background: #403d52; color: #e0def4; }
+    .modal--rose-pine ListView > ListItem.--highlight, .modal--rose-pine Button:hover, .modal--rose-pine Button:focus { background: #c4a7e7; color: #191724; }
+    .modal--rose-pine Input { background: #191724; border: tall #9ccfd8; color: #e0def4; }
+    .modal--rose-pine Input:focus { border: tall #ebbcba; }
+    .modal--rose-pine Label { color: #f6c177; }
 
     Screen.catppuccin { background: #1e1e2e; color: #cdd6f4; }
     Screen.catppuccin Footer, Screen.catppuccin #topbar { background: #181825; color: #a6adc8; }
     Screen.catppuccin #title, Screen.catppuccin #repository-title { color: #cdd6f4; }
     Screen.catppuccin #github-status { color: #94e2d5; }
-    Screen.catppuccin #repos { background: #181825; border: tall #cba6f7; }
-    Screen.catppuccin #content, Screen.catppuccin #setup { background: #181825; border: tall #45475a; }
-    Screen.catppuccin #changes, Screen.catppuccin #diff { background: #1e1e2e; border: tall #45475a; }
+    Screen.catppuccin #repos { background: #181825; border: tall #cba6f7; color: #cdd6f4; }
+    Screen.catppuccin #content, Screen.catppuccin #setup { background: #181825; border: tall #45475a; color: #cdd6f4; }
+    Screen.catppuccin #changes, Screen.catppuccin #diff { background: #1e1e2e; border: tall #45475a; color: #cdd6f4; }
     Screen.catppuccin #diff:focus { border: tall #f9e2af; background: #313244; }
     Screen.catppuccin ListView > ListItem:hover, Screen.catppuccin Button { background: #45475a; color: #cdd6f4; }
     Screen.catppuccin ListView > ListItem.--highlight, Screen.catppuccin Button:hover, Screen.catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
@@ -428,23 +437,13 @@ class GitCliApp(App[None]):
     Screen.catppuccin Input:focus { border: tall #f9e2af; }
     Screen.catppuccin Label, Screen.catppuccin #import-status { color: #f9e2af; }
     Screen.catppuccin #changes > ListItem.selected { background: #585b70; color: #cdd6f4; }
-    Screen.catppuccin RichLog { color: #cdd6f4; }
 
-    .modal--rose-pine { background: #1f1d2e; color: #e0def4; border: tall #c4a7e7; }
-    .modal--rose-pine ListView, .modal--rose-pine RichLog, .modal--rose-pine Input { background: #191724; border: tall #403d52; color: #e0def4; }
-    .modal--rose-pine ListView > ListItem:hover { background: #403d52; color: #e0def4; }
-    .modal--rose-pine ListView > ListItem.--highlight { background: #c4a7e7; color: #191724; }
-    .modal--rose-pine Button { background: #403d52; color: #e0def4; }
-    .modal--rose-pine Button:hover, .modal--rose-pine Button:focus { background: #c4a7e7; color: #191724; }
-    .modal--rose-pine Input:focus { border: tall #ebbcba; }
-    .modal--rose-pine Label { color: #f6c177; }
-
-    .modal--catppuccin { background: #181825; color: #cdd6f4; border: tall #cba6f7; }
-    .modal--catppuccin ListView, .modal--catppuccin RichLog, .modal--catppuccin Input { background: #1e1e2e; border: tall #45475a; color: #cdd6f4; }
-    .modal--catppuccin ListView > ListItem:hover { background: #45475a; color: #cdd6f4; }
-    .modal--catppuccin ListView > ListItem.--highlight { background: #cba6f7; color: #1e1e2e; }
-    .modal--catppuccin Button { background: #45475a; color: #cdd6f4; }
-    .modal--catppuccin Button:hover, .modal--catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
+    .modal--catppuccin { background: #181825; color: #cdd6f4; }
+    .modal--catppuccin > * { background: #181825; border: tall #cba6f7; color: #cdd6f4; }
+    .modal--catppuccin ListView, .modal--catppuccin RichLog { background: #1e1e2e; border: tall #45475a; color: #cdd6f4; }
+    .modal--catppuccin ListView > ListItem:hover, .modal--catppuccin Button { background: #45475a; color: #cdd6f4; }
+    .modal--catppuccin ListView > ListItem.--highlight, .modal--catppuccin Button:hover, .modal--catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
+    .modal--catppuccin Input { background: #1e1e2e; border: tall #94e2d5; color: #cdd6f4; }
     .modal--catppuccin Input:focus { border: tall #f9e2af; }
     .modal--catppuccin Label { color: #f9e2af; }
     """
@@ -678,8 +677,7 @@ class GitCliApp(App[None]):
         self.set_diff(result)
 
     def push_themed_screen(self, screen: ModalScreen, callback: object = None) -> None:
-        if self.color_theme != "forest":
-            screen.add_class(f"modal--{self.color_theme}")
+        screen.add_class(f"modal--{self.color_theme}")
         self.push_screen(screen, callback)
 
     def action_theme(self) -> None:
