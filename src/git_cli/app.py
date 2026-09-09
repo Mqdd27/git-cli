@@ -347,6 +347,7 @@ class GitCliApp(App[None]):
     Button { background: #3a684f; color: #fff8df; border: none; margin-top: 1; }
     Button:hover, Button:focus { background: #d49a3a; color: #1b241f; }
     #import-status { color: #d9c48d; }
+    Footer { background: #24342d; color: #b8c8b9; }
 
     Screen.midnight { background: #111827; color: #dbeafe; }
     Screen.midnight Footer, Screen.midnight #topbar { background: #1e293b; color: #94a3b8; }
@@ -378,18 +379,24 @@ class GitCliApp(App[None]):
     Screen.light RichLog { color: #1e293b; }
 
     .modal--midnight { background: #172033; color: #dbeafe; border: tall #38bdf8; }
-    .modal--midnight ListView { background: #0f172a; border: tall #475569; }
-    .modal--midnight RichLog { background: #0f172a; border: tall #475569; color: #dbeafe; }
+    .modal--midnight ListView, .modal--midnight RichLog { background: #0f172a; border: tall #475569; color: #dbeafe; }
+    .modal--midnight ListView > ListItem:hover { background: #1d4ed8; }
+    .modal--midnight ListView > ListItem.--highlight { background: #f59e0b; color: #111827; }
     .modal--midnight Button { background: #1d4ed8; color: #ffffff; }
     .modal--midnight Button:hover, .modal--midnight Button:focus { background: #f59e0b; color: #111827; }
     .modal--midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
+    .modal--midnight Input:focus { border: tall #f59e0b; }
+    .modal--midnight Label { color: #fde68a; }
 
     .modal--light { background: #ffffff; color: #1e293b; border: tall #2563eb; }
-    .modal--light ListView { background: #f8fafc; border: tall #94a3b8; }
-    .modal--light RichLog { background: #f8fafc; border: tall #94a3b8; color: #1e293b; }
+    .modal--light ListView, .modal--light RichLog { background: #f8fafc; border: tall #cbd5e1; color: #1e293b; }
+    .modal--light ListView > ListItem:hover { background: #2563eb; }
+    .modal--light ListView > ListItem.--highlight { background: #d97706; }
     .modal--light Button { background: #2563eb; color: #ffffff; }
     .modal--light Button:hover, .modal--light Button:focus { background: #d97706; color: #ffffff; }
     .modal--light Input { background: #ffffff; border: tall #2563eb; color: #1e293b; }
+    .modal--light Input:focus { border: tall #d97706; }
+    .modal--light Label { color: #92400e; }
 
     Screen.rose-pine { background: #191724; color: #e0def4; }
     Screen.rose-pine Footer, Screen.rose-pine #topbar { background: #26233a; color: #908caa; }
@@ -425,13 +432,21 @@ class GitCliApp(App[None]):
 
     .modal--rose-pine { background: #1f1d2e; color: #e0def4; border: tall #c4a7e7; }
     .modal--rose-pine ListView, .modal--rose-pine RichLog, .modal--rose-pine Input { background: #191724; border: tall #403d52; color: #e0def4; }
+    .modal--rose-pine ListView > ListItem:hover { background: #403d52; color: #e0def4; }
+    .modal--rose-pine ListView > ListItem.--highlight { background: #c4a7e7; color: #191724; }
     .modal--rose-pine Button { background: #403d52; color: #e0def4; }
     .modal--rose-pine Button:hover, .modal--rose-pine Button:focus { background: #c4a7e7; color: #191724; }
+    .modal--rose-pine Input:focus { border: tall #ebbcba; }
+    .modal--rose-pine Label { color: #f6c177; }
 
     .modal--catppuccin { background: #181825; color: #cdd6f4; border: tall #cba6f7; }
     .modal--catppuccin ListView, .modal--catppuccin RichLog, .modal--catppuccin Input { background: #1e1e2e; border: tall #45475a; color: #cdd6f4; }
+    .modal--catppuccin ListView > ListItem:hover { background: #45475a; color: #cdd6f4; }
+    .modal--catppuccin ListView > ListItem.--highlight { background: #cba6f7; color: #1e1e2e; }
     .modal--catppuccin Button { background: #45475a; color: #cdd6f4; }
     .modal--catppuccin Button:hover, .modal--catppuccin Button:focus { background: #cba6f7; color: #1e1e2e; }
+    .modal--catppuccin Input:focus { border: tall #f9e2af; }
+    .modal--catppuccin Label { color: #f9e2af; }
     """
 
     def __init__(self) -> None:
