@@ -2,6 +2,7 @@ import json
 import os
 import platform
 import subprocess
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
@@ -25,10 +26,53 @@ class RepositoryStatus:
     changes: list[Change]
 
 
+@dataclass(frozen=True)
+class CustomTheme:
+    name: str
+    label: str
+    colors: dict[str, str]
+
+
+THEME_COLORS = {
+    "background",
+    "surface",
+    "surface_alt",
+    "text",
+    "muted",
+    "border",
+    "accent",
+    "highlight",
+    "label",
+}
+
+
 def config_directory() -> Path:
     if platform.system() == "Darwin":
         return Path.home() / "Library" / "Application Support" / "git-cli"
     return Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "git-cli"
+
+
+def custom_themes_directory() -> Path:
+    return config_directory() / "themes"
+
+
+def custom_themes() -> list[CustomTheme]:
+    directory = custom_themes_directory()
+    if not directory.is_dir():
+        return []
+    themes: list[CustomTheme] = []
+    for path in directory.glob("*.json"):
+        try:
+            value = json.loads(path.read_text())
+            colors = value["colors"]
+            if not re.fullmatch(r"[a-z0-9-]+", path.stem):
+                continue
+            if not THEME_COLORS <= colors.keys() or not all(isinstance(color, str) and re.fullmatch(r"#[0-9a-fA-F]{6}", color) for color in colors.values()):
+                continue
+            themes.append(CustomTheme(path.stem, value.get("label", path.stem), colors))
+        except (OSError, ValueError, json.JSONDecodeError, KeyError):
+            continue
+    return themes
 
 
 def registry_path() -> Path:
@@ -211,13 +255,7 @@ def diff(path: Path, change: Change) -> str:
 
 
 def run_git(path: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
-        ["git", *arguments],
-        cwd=path,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    return subprocess.run(["git", *arguments], cwd=path, capture_output=True, text=True, check=False)
 
 
 def is_repository(path: Path) -> bool:

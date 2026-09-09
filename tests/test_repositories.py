@@ -7,6 +7,19 @@ from git_cli import repositories
 
 
 class PreferenceTests(unittest.TestCase):
+    def test_loads_valid_custom_theme(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            (directory / "solarized.json").write_text(
+                '{"label":"Solarized","colors":{"background":"#002b36","surface":"#073642","surface_alt":"#00212b","text":"#839496","muted":"#586e75","border":"#586e75","accent":"#2aa198","highlight":"#b58900","label":"#cb4b16"}}'
+            )
+
+            with patch.object(repositories, "custom_themes_directory", return_value=directory):
+                themes = repositories.custom_themes()
+
+            self.assertEqual(themes[0].name, "solarized")
+            self.assertEqual(themes[0].label, "Solarized")
+
     def test_theme_and_source_file_share_preferences(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_directory:
             preferences = Path(temporary_directory) / "preferences.json"

@@ -3,7 +3,8 @@ from pathlib import Path
 import subprocess
 from typing import Optional
 
-from textual.app import App, ComposeResult
+from textual.app import App, ComposeResult, SystemCommand
+from textual.command import CommandPalette
 from textual.screen import ModalScreen
 from textual.containers import Grid, Horizontal, Vertical
 from textual.events import Key
@@ -285,20 +286,20 @@ class ThemeScreen(ModalScreen[Optional[str]]):
     #theme-list { height: 8; margin-top: 1;  }
     """
 
+    def __init__(self, themes: list[tuple[str, str]]) -> None:
+        super().__init__()
+        self.themes = themes
+
     def compose(self) -> ComposeResult:
         with Vertical(id="theme-dialog"):
             yield Label("Select theme")
             with ListView(id="theme-list"):
-                yield ListItem(Label("Forest"))
-                yield ListItem(Label("Midnight"))
-                yield ListItem(Label("Light"))
-                yield ListItem(Label("Rosé Pine"))
-                yield ListItem(Label("Catppuccin Mocha"))
+                for _, label in self.themes:
+                    yield ListItem(Label(label))
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
-        themes = ("forest", "midnight", "light", "rose-pine", "catppuccin")
         index = event.list_view.index
-        self.dismiss(themes[index] if index is not None else None)
+        self.dismiss(self.themes[index][0] if index is not None else None)
 
     def on_key(self, event: Key) -> None:
         if event.key in ("escape", "q"):
@@ -353,6 +354,9 @@ class GitCliApp(App[None]):
     .modal--forest > * { background: #1c2923; border: tall #d49a3a; }
     .modal--forest ListView, .modal--forest RichLog { background: #1c2923; border: tall #426f58; }
 
+    CommandPalette.palette--forest, CommandPalette.palette--forest > Vertical { background: #1c2923; color: #e8eadf; }
+    CommandPalette.palette--forest #--input, CommandPalette.palette--forest #--results { background: #142018; border: tall #d49a3a; color: #f5eed8; }
+
     Screen.midnight { background: #111827; color: #dbeafe; }
     Screen.midnight Footer, Screen.midnight #topbar { background: #1e293b; color: #94a3b8; }
     Screen.midnight #title, Screen.midnight #repository-title { color: #e2e8f0; }
@@ -376,6 +380,8 @@ class GitCliApp(App[None]):
     .modal--midnight Input { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
     .modal--midnight Input:focus { border: tall #f59e0b; }
     .modal--midnight Label { color: #fde68a; }
+    CommandPalette.palette--midnight, CommandPalette.palette--midnight > Vertical { background: #172033; color: #dbeafe; }
+    CommandPalette.palette--midnight #--input, CommandPalette.palette--midnight #--results { background: #0f172a; border: tall #38bdf8; color: #dbeafe; }
 
     Screen.light { background: #f8fafc; color: #1e293b; }
     Screen.light Footer, Screen.light #topbar { background: #e2e8f0; color: #475569; }
@@ -400,6 +406,8 @@ class GitCliApp(App[None]):
     .modal--light Input { background: #ffffff; border: tall #2563eb; color: #1e293b; }
     .modal--light Input:focus { border: tall #d97706; }
     .modal--light Label { color: #92400e; }
+    CommandPalette.palette--light, CommandPalette.palette--light > Vertical { background: #ffffff; color: #1e293b; }
+    CommandPalette.palette--light #--input, CommandPalette.palette--light #--results { background: #f8fafc; border: tall #2563eb; color: #1e293b; }
 
     Screen.rose-pine { background: #191724; color: #e0def4; }
     Screen.rose-pine Footer, Screen.rose-pine #topbar { background: #26233a; color: #908caa; }
@@ -424,6 +432,8 @@ class GitCliApp(App[None]):
     .modal--rose-pine Input { background: #191724; border: tall #9ccfd8; color: #e0def4; }
     .modal--rose-pine Input:focus { border: tall #ebbcba; }
     .modal--rose-pine Label { color: #f6c177; }
+    CommandPalette.palette--rose-pine, CommandPalette.palette--rose-pine > Vertical { background: #1f1d2e; color: #e0def4; }
+    CommandPalette.palette--rose-pine #--input, CommandPalette.palette--rose-pine #--results { background: #191724; border: tall #c4a7e7; color: #e0def4; }
 
     Screen.catppuccin { background: #1e1e2e; color: #cdd6f4; }
     Screen.catppuccin Footer, Screen.catppuccin #topbar { background: #181825; color: #a6adc8; }
@@ -448,11 +458,14 @@ class GitCliApp(App[None]):
     .modal--catppuccin Input { background: #1e1e2e; border: tall #94e2d5; color: #cdd6f4; }
     .modal--catppuccin Input:focus { border: tall #f9e2af; }
     .modal--catppuccin Label { color: #f9e2af; }
+    CommandPalette.palette--catppuccin, CommandPalette.palette--catppuccin > Vertical { background: #181825; color: #cdd6f4; }
+    CommandPalette.palette--catppuccin #--input, CommandPalette.palette--catppuccin #--results { background: #1e1e2e; border: tall #cba6f7; color: #cdd6f4; }
     """
 
     def __init__(self) -> None:
         super().__init__()
         self.repositories = repositories.load()
+        self.custom_themes = {theme.name: theme for theme in repositories.custom_themes()}
         self.color_theme = repositories.load_theme()
         self.selected_repository: Optional[Path] = None
         self.changes: list[repositories.Change] = []
@@ -481,7 +494,26 @@ class GitCliApp(App[None]):
                 yield Static(id="import-status")
         yield Footer()
 
+    def get_system_commands(self, screen: object) -> object:
+        for command in super().get_system_commands(screen):
+            if command.title != "Change theme":
+                yield command
+        yield SystemCommand("Refresh repositories", "Read repos.txt and refresh Git status", self.action_refresh_status)
+        yield SystemCommand("Stage selected changes", "Stage or unstage the selected changed files", self.action_stage_changes)
+        yield SystemCommand("Commit staged changes", "Write a commit message", self.action_commit)
+        yield SystemCommand("Undo last commit", "Undo the latest local commit and keep changes staged", self.action_undo_commit)
+        yield SystemCommand("Pull active branch", "Pull with fast-forward, merge, or rebase", self.action_pull)
+        yield SystemCommand("Push branch", "Select a local branch to push to origin", self.action_push)
+        yield SystemCommand("View GitHub issues", "Open issues for the active repository", self.action_issues)
+        yield SystemCommand("Change color theme", "Select Forest, Midnight, Light, Rosé Pine, or Catppuccin", self.action_theme)
+
+    def action_command_palette(self) -> None:
+        palette = CommandPalette(id="--command-palette")
+        palette.add_class(f"palette--{self.color_theme}")
+        self.push_screen(palette)
+
     def on_mount(self) -> None:
+        self.load_custom_theme_styles()
         self.apply_theme(self.color_theme)
         self.sync_source_file()
         self.refresh_repositories()
@@ -684,13 +716,44 @@ class GitCliApp(App[None]):
         screen.add_class(f"modal--{self.color_theme}")
         self.push_screen(screen, callback)
 
+    def load_custom_theme_styles(self) -> None:
+        for theme in self.custom_themes.values():
+            colors = theme.colors
+            selector = f"custom-{theme.name}"
+            css = f"""
+            Screen.{selector}, .modal--{selector} {{ background: {colors['background']}; color: {colors['text']}; }}
+            Screen.{selector} #topbar, Screen.{selector} Footer {{ background: {colors['surface']}; color: {colors['muted']}; }}
+            Screen.{selector} #repos, Screen.{selector} #content, Screen.{selector} #setup {{ background: {colors['surface']}; border: tall {colors['border']}; color: {colors['text']}; }}
+            Screen.{selector} #changes, Screen.{selector} #diff {{ background: {colors['surface_alt']}; border: tall {colors['border']}; color: {colors['text']}; }}
+            Screen.{selector} #diff:focus {{ border: tall {colors['highlight']}; background: {colors['surface']}; }}
+            Screen.{selector} ListView > ListItem:hover, Screen.{selector} Button {{ background: {colors['accent']}; color: {colors['background']}; }}
+            Screen.{selector} ListView > ListItem.--highlight, Screen.{selector} Button:hover, Screen.{selector} Button:focus {{ background: {colors['highlight']}; color: {colors['background']}; }}
+            Screen.{selector} Input {{ background: {colors['surface_alt']}; border: tall {colors['accent']}; color: {colors['text']}; }}
+            Screen.{selector} Label {{ color: {colors['label']}; }}
+            Screen.{selector} #github-status {{ color: {colors['accent']}; }}
+            .modal--{selector} > * {{ background: {colors['surface']}; border: tall {colors['accent']}; color: {colors['text']}; }}
+            .modal--{selector} ListView, .modal--{selector} RichLog, .modal--{selector} Input {{ background: {colors['surface_alt']}; border: tall {colors['border']}; color: {colors['text']}; }}
+            .modal--{selector} ListView > ListItem:hover, .modal--{selector} Button {{ background: {colors['accent']}; color: {colors['background']}; }}
+            .modal--{selector} ListView > ListItem.--highlight, .modal--{selector} Button:hover, .modal--{selector} Button:focus {{ background: {colors['highlight']}; color: {colors['background']}; }}
+            .modal--{selector} Label {{ color: {colors['label']}; }}
+            CommandPalette.palette--{selector}, CommandPalette.palette--{selector} > Vertical {{ background: {colors['surface']}; color: {colors['text']}; }}
+            CommandPalette.palette--{selector} #--input, CommandPalette.palette--{selector} #--results {{ background: {colors['surface_alt']}; border: tall {colors['accent']}; color: {colors['text']}; }}
+            """
+            self.stylesheet.add_source(css)
+        self.stylesheet.reparse()
+        self.stylesheet.update(self.screen)
+
     def action_theme(self) -> None:
-        self.push_themed_screen(ThemeScreen(), self.apply_theme)
+        builtins = [("forest", "Forest"), ("midnight", "Midnight"), ("light", "Light"), ("rose-pine", "Rosé Pine"), ("catppuccin", "Catppuccin Mocha")]
+        custom = [(f"custom-{theme.name}", theme.label) for theme in self.custom_themes.values()]
+        self.push_themed_screen(ThemeScreen(builtins + custom), self.apply_theme)
 
     def apply_theme(self, theme: Optional[str]) -> None:
-        if theme not in ("forest", "midnight", "light", "rose-pine", "catppuccin"):
+        valid_themes = {"forest", "midnight", "light", "rose-pine", "catppuccin"}
+        valid_themes.update(f"custom-{name}" for name in self.custom_themes)
+        if theme not in valid_themes:
             return
-        self.screen.remove_class("midnight", "light", "rose-pine", "catppuccin")
+        self.screen.remove_class("midnight", "light", "rose-pine", "catppuccin", *[f"custom-{name}" for name in self.custom_themes])
         if theme != "forest":
             self.screen.add_class(theme)
         self.color_theme = theme

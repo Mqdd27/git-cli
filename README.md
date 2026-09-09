@@ -79,6 +79,34 @@ The text file path is remembered. On startup and refresh (`g`), the file is read
 | `i` | Open the GitHub issues dialog |
 | `Escape` | Refresh the current repository status |
 
+## Custom themes
+
+Create a JSON file in the custom theme directory:
+
+- macOS: `~/Library/Application Support/git-cli/themes/`
+- Linux: `$XDG_CONFIG_HOME/git-cli/themes/` or `~/.config/git-cli/themes/`
+
+Example `solarized.json`:
+
+```json
+{
+  "label": "Solarized Dark",
+  "colors": {
+    "background": "#002b36",
+    "surface": "#073642",
+    "surface_alt": "#00212b",
+    "text": "#839496",
+    "muted": "#586e75",
+    "border": "#586e75",
+    "accent": "#2aa198",
+    "highlight": "#b58900",
+    "label": "#cb4b16"
+  }
+}
+```
+
+Restart Git CLI, then use `T` and select the custom theme. The JSON filename becomes the theme ID; `label` is the name shown in the selector.
+
 ## Pull conflicts
 
 When a pull cannot fast-forward, a dialog asks whether to merge or rebase. If the pull stops on conflicts, Git CLI detects the conflicted files and opens them in your editor so you can resolve them. After editing, stage the files with `s` and finish the merge or rebase from the terminal.
