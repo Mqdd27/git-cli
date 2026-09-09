@@ -14,9 +14,15 @@ class ImportResult:
 
 
 @dataclass(frozen=True)
+class Change:
+    code: str
+    path: str
+
+
+@dataclass(frozen=True)
 class RepositoryStatus:
     branch: str
-    changes: str
+    changes: list[Change]
 
 
 def registry_path() -> Path:
@@ -49,7 +55,7 @@ def save(repositories: Iterable[Path]) -> None:
 
 def import_file(path: Path, existing: Iterable[Path] = ()) -> ImportResult:
     existing_paths = {repository.resolve() for repository in existing}
-    repositories: list[Path] = []
+    imported: list[Path] = []
     invalid_paths: list[str] = []
 
     for line in path.read_text().splitlines():
@@ -63,27 +69,58 @@ def import_file(path: Path, existing: Iterable[Path] = ()) -> ImportResult:
         if not is_repository(repository):
             invalid_paths.append(value)
         elif repository not in existing_paths:
-            repositories.append(repository)
+            imported.append(repository)
             existing_paths.add(repository)
 
-    return ImportResult(repositories, invalid_paths)
+    return ImportResult(imported, invalid_paths)
 
 
 def status(path: Path) -> RepositoryStatus:
-    result = subprocess.run(
-        ["git", "status", "--short", "--branch"],
+    result = run_git(path, "status", "--short", "--branch")
+    if result.returncode != 0:
+        return RepositoryStatus("Unavailable", [Change("!!", result.stderr.strip() or "Unable to read Git status.")])
+
+    lines = result.stdout.splitlines()
+    branch = lines[0].removeprefix("## ") if lines else "Unknown"
+    changes = [Change(line[:2], line[3:]) for line in lines[1:]]
+    return RepositoryStatus(branch, changes)
+
+
+def stage(path: Path, changes: Iterable[Change]) -> str:
+    selected = list(changes)
+    if not selected:
+        return "No changes selected."
+    staged = [change.path for change in selected if change.code[0] not in (" ", "?")]
+    unstaged = [change.path for change in selected if change.code[0] in (" ", "?")]
+    results = []
+    if staged:
+        results.append(run_git(path, "restore", "--staged", "--", *staged))
+    if unstaged:
+        results.append(run_git(path, "add", "--", *unstaged))
+    errors = [result.stderr.strip() for result in results if result.returncode != 0 and result.stderr.strip()]
+    return "\n".join(errors) or "Changes updated."
+
+
+def commit(path: Path, message: str) -> str:
+    result = run_git(path, "commit", "-m", message)
+    return result.stdout.strip() or result.stderr.strip() or "Commit completed."
+
+
+def diff(path: Path, change: Change) -> str:
+    if change.code == "??":
+        return "Untracked files do not have a Git diff. Stage the file first."
+    result = run_git(path, "diff", "HEAD", "--", change.path)
+    return result.stdout or result.stderr or "No diff available."
+
+
+def run_git(path: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", *arguments],
         cwd=path,
         capture_output=True,
         text=True,
         check=False,
     )
-    if result.returncode != 0:
-        return RepositoryStatus("Unavailable", result.stderr.strip() or "Unable to read Git status.")
-
-    lines = result.stdout.splitlines()
-    branch = lines[0].removeprefix("## ") if lines else "Unknown"
-    changes = "\n".join(lines[1:]) or "Working tree clean."
-    return RepositoryStatus(branch, changes)
 
 
 def is_repository(path: Path) -> bool:
