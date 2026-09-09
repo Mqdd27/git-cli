@@ -301,6 +301,7 @@ class GitCliApp(App[None]):
     def show_status(self) -> None:
         if self.selected_repository is None:
             return
+        selected_path = self.current_change_path()
         status = repositories.status(self.selected_repository)
         self.changes = status.changes
         self.query_one("#setup", Vertical).display = False
@@ -313,6 +314,11 @@ class GitCliApp(App[None]):
             changes_view.append(ListItem(Label("Working tree clean.")))
         for change in self.changes:
             changes_view.append(ListItem(Label(f"{change.code} {change.path}")))
+        if selected_path:
+            for index, change in enumerate(self.changes):
+                if change.path == selected_path:
+                    changes_view.index = index
+                    break
         self.selected_change_indexes.clear()
         self.open_change_indexes.clear()
         self.set_diff("Select changes with v, then press Tab or d to toggle their diffs.")
@@ -419,6 +425,12 @@ class GitCliApp(App[None]):
         result = repositories.push(self.selected_repository, branch)
         self.show_status()
         self.set_diff(f"Push to origin/{branch}\n\n{result}")
+
+    def current_change_path(self) -> Optional[str]:
+        index = self.query_one("#changes", ListView).index
+        if index is None or index < 0 or index >= len(self.changes):
+            return None
+        return self.changes[index].path
 
     def current_change_index(self) -> set[int]:
         index = self.query_one("#changes", ListView).index
