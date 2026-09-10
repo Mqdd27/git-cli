@@ -83,6 +83,7 @@ The text file path is remembered. On startup and refresh (`g`), the file is read
 | `u` | Undo the last commit (`git reset --soft HEAD~1`) |
 | `p` | Select a branch and push to `origin` |
 | `P` | Pull the active branch; choose rebase or merge strategy |
+| `a` | Import repository list file (`.txt`) |
 | `T` | Change the color theme |
 | `i` | Open the GitHub issues dialog |
 | `Escape` | Refresh the current repository status |
