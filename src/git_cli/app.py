@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import shlex
 import subprocess
 from typing import Optional
 
@@ -320,6 +321,7 @@ class GitCliApp(App[None]):
         ("p", "push", "Push"),
         ("P", "pull", "Pull"),
         ("i", "issues", "Issues"),
+        ("o", "open_changes", "Open editor"),
         ("T", "theme", "Theme"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
@@ -687,6 +689,18 @@ class GitCliApp(App[None]):
         )
         self.show_status()
         self.set_diff(result)
+
+    def action_open_changes(self) -> None:
+        if self.selected_repository is None or self.focused is not self.query_one("#changes", ListView):
+            return
+        indexes = self.selected_change_indexes or self.current_change_index()
+        if not indexes:
+            return
+        files = [self.changes[index].path for index in sorted(indexes)]
+        editor = shlex.split(os.environ.get("EDITOR") or os.environ.get("VISUAL") or "vi")
+        with self.suspend():
+            subprocess.call([*editor, *files], cwd=self.selected_repository)
+        self.show_status()
 
     def action_stage_changes(self) -> None:
         if self.selected_repository is None:
