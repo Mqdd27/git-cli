@@ -280,6 +280,36 @@ class IssuesScreen(ModalScreen[None]):
             self.dismiss()
 
 
+class ImportFileScreen(ModalScreen[Optional[str]]):
+    CSS = """
+    ImportFileScreen { align: center middle; }
+    #import-dialog { width: 70; height: auto; padding: 1 2; }
+    #import-file-input { margin-top: 1; }
+    #import-actions { height: 3; align: center middle; }
+    #import-actions Button { margin: 0 1; }
+    """
+
+    def compose(self) -> ComposeResult:
+        with Vertical(id="import-dialog"):
+            yield Label("Import repositories file")
+            yield Input(placeholder="Path to .txt file (e.g. ~/repos.txt)", id="import-file-input")
+            with Horizontal(id="import-actions"):
+                yield Button("Import", id="confirm-import")
+                yield Button("Cancel", id="cancel-import")
+
+    def on_mount(self) -> None:
+        self.query_one("#import-file-input", Input).focus()
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value.strip() or None)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "confirm-import":
+            self.dismiss(self.query_one("#import-file-input", Input).value.strip() or None)
+        else:
+            self.dismiss(None)
+
+
 class ThemeScreen(ModalScreen[Optional[str]]):
     CSS = """
     ThemeScreen { align: center middle; }
@@ -322,6 +352,7 @@ class GitCliApp(App[None]):
         ("P", "pull", "Pull"),
         ("i", "issues", "Issues"),
         ("o", "open_changes", "Open editor"),
+        ("a", "add_repositories", "Add repos file"),
         ("T", "theme", "Theme"),
         ("j", "cursor_down", "Down"),
         ("k", "cursor_up", "Up"),
@@ -501,6 +532,7 @@ class GitCliApp(App[None]):
             if command.title != "Change theme":
                 yield command
         yield SystemCommand("Refresh repositories", "Read repos.txt and refresh Git status", self.action_refresh_status)
+        yield SystemCommand("Add repository file", "Import repositories from a .txt file", self.action_add_repositories)
         yield SystemCommand("Stage selected changes", "Stage or unstage the selected changed files", self.action_stage_changes)
         yield SystemCommand("Commit staged changes", "Write a commit message", self.action_commit)
         yield SystemCommand("Undo last commit", "Undo the latest local commit and keep changes staged", self.action_undo_commit)
@@ -520,7 +552,14 @@ class GitCliApp(App[None]):
         self.sync_source_file()
         self.refresh_repositories()
         self.show_github_status()
-        self.query_one("#setup", Vertical).display = not self.repositories
+        setup = self.query_one("#setup", Vertical)
+        content = self.query_one("#content", Vertical)
+        has_repos = bool(self.repositories)
+        setup.display = not has_repos
+        content.display = has_repos
+        if not has_repos:
+            self.query_one("#import-status", Static).update("Enter the path to your repository list file to get started.")
+            self.query_one("#repo-file", Input).focus()
         self.set_diff("Select changes with v, then press Tab or d to toggle their diffs.")
 
     def on_key(self, event: Key) -> None:
@@ -607,6 +646,7 @@ class GitCliApp(App[None]):
         status = repositories.status(self.selected_repository)
         self.changes = status.changes
         self.query_one("#setup", Vertical).display = False
+        self.query_one("#content", Vertical).display = True
         self.query_one("#repository-title", Static).update(
             f"{self.selected_repository}\nBranch: {status.branch}"
         )
@@ -689,6 +729,19 @@ class GitCliApp(App[None]):
         )
         self.show_status()
         self.set_diff(result)
+
+    def action_add_repositories(self) -> None:
+        self.push_themed_screen(ImportFileScreen(), self.handle_import_file)
+
+    def handle_import_file(self, file_path: Optional[str]) -> None:
+        if not file_path:
+            return
+        path = Path(file_path).expanduser()
+        if not path.is_file():
+            self.set_diff(f"File not found: {file_path}")
+            return
+        self.import_from(path)
+        self.set_diff(f"Registered repositories from {path}")
 
     def action_open_changes(self) -> None:
         if self.selected_repository is None or self.focused is not self.query_one("#changes", ListView):
@@ -918,6 +971,10 @@ class GitCliApp(App[None]):
             github_status.available and not github_status.authenticated
         )
 
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        if event.input.id == "repo-file":
+            self.import_repositories()
+
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "github-login":
             with self.suspend():
@@ -954,6 +1011,8 @@ class GitCliApp(App[None]):
         self.repositories.extend(result.repositories)
         repositories.save(self.repositories)
         repositories.save_source_file(path)
+        self.query_one("#setup", Vertical).display = False
+        self.query_one("#content", Vertical).display = True
         self.refresh_repositories()
 
 
