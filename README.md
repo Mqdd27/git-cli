@@ -10,16 +10,24 @@ A terminal UI for monitoring and managing local Git repositories with GitHub int
 
 ## Install
 
+### Standalone binary (recommended)
+
+Download the binary matching your platform and architecture, make it executable, then run it:
+
+```sh
+chmod +x git-cli
+git-cli
+```
+
+The current local build is available at `dist/git-cli` and targets macOS Apple Silicon (`arm64`). The binary includes Python and application dependencies; still need system `git` and `gh` for GitHub features.
+
+### From source
+
 ```sh
 python3 -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-```
-
-Run the application:
-
-```sh
 git-cli
 ```
 
