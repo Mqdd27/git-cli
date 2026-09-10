@@ -15,11 +15,24 @@ A terminal UI for monitoring and managing local Git repositories with GitHub int
 Download the binary matching your platform and architecture, make it executable, then run it:
 
 ```sh
-chmod +x git-cli
+chmod +x git-cli-macos-arm64
+./git-cli-macos-arm64
+```
+
+To run it as `git-cli` from any directory:
+
+```sh
+mv git-cli-macos-arm64 git-cli
+sudo mv git-cli /usr/local/bin/
 git-cli
 ```
 
-The current local build is available at `dist/git-cli` and targets macOS Apple Silicon (`arm64`). The binary includes Python and application dependencies; still need system `git` and `gh` for GitHub features.
+Binaries are published as GitHub Release assets after a version tag is pushed:
+
+- `git-cli-macos-arm64` for macOS Apple Silicon
+- `git-cli-linux-x64` for 64-bit Linux
+
+The binary includes Python and application dependencies; users still need system `git` and `gh` for GitHub features. The local `dist/` directory is intentionally ignored and does not belong in a clone.
 
 ### From source
 
